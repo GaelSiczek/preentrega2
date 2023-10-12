@@ -1,107 +1,142 @@
-const carrito = [];
-
-const remera = {
-    nombre: "Remera",
-    precio: 8.000,
-    subtotal: 8.000,
-    cantidad: 1,
-};
-const buzo = {
-    nombre: "buzo",
-    precio: 20.000,
-    subtotal: 20.000,
-    cantidad: 1,
-};
-const pantalon = {
-    nombre: "Pantalon",
-    precio: 15.000,
-    subtotal: 15.000,
-    cantidad: 1,
-};
-
-
-carrito.push(remera);
-carrito.push(buzo);
-carrito.push(pantalon);
-
-
-function enCarrito(nombrePrompt) {
-    return carrito.find((producto) => producto.nombre == nombrePrompt);
+class Producto {
+    constructor(id, nombre, precio, categoria) {
+    this.id = id;
+    this.nombre = nombre;
+    this.precio = precio;
+    this.categoria = categoria;
+    }
 }
 
+class BaseDeDatos {
+    constructor() {
+    this.productos = [];
+    this.agregarRegistro(1, "Remera", 7000, "Ropa");
+    this.agregarRegistro(2, "Pantalon", 10000, "Ropa");
+    this.agregarRegistro(3, "Buzo", 15000, "Ropa");
+    }
 
-function buscar() {
-    const keyword = prompt("¿Qué prenda de ropa desea buscar?");
-    const arrayResultados = carrito.filter((el) =>
-    el.nombre.toLowerCase().includes(keyword.toLowerCase())
-);
-    console.log(arrayResultados);
+    agregarRegistro(id, nombre, precio, categoria) {
+    const producto = new Producto(id, nombre, precio, categoria);
+    this.productos.push(producto);
+    }
+
+    traerRegistros() {
+    return this.productos;
+    }
+
+    registroPorId(id) {
+    return this.productos.find((producto) => producto.id === id);
+    }
+
+    registrosPorNombre(palabra) {
+    return this.productos.filter((producto) =>
+        producto.nombre.toLowerCase().includes(palabra.toLowerCase())
+    );
+    }
 }
+class Carrito {
+    constructor() {
+    const carritoStorage = JSON.parse(localStorage.getItem("carrito"));
+    this.carrito = carritoStorage || [];
+    this.total = 0; 
+    this.cantidadProductos = 0;   
+    this.listar();
+    }
+    estaEnCarrito({ id }) {
+    return this.carrito.find((producto) => producto.id === id);
+    }
 
-
-function agregar() {
-    const nombrePrompt = prompt("Introduzca el nombre de la prenda que desea agregar:");
-    const nuevoProducto = {
-    nombre: nombrePrompt,
-    precio: parseInt(precioPrompt),
-    subtotal: parseInt(precioPrompt),
-    cantidad: 1,
-    };
-    const productoEncontrado = enCarrito(nombrePrompt);
-    if (productoEncontrado) {
-    productoEncontrado.cantidad++;
-    productoEncontrado.precio = parseInt(precioPrompt);
-    productoEncontrado.subtotal = parseInt(precioPrompt) * productoEncontrado.cantidad;
+    agregar(producto) {
+    const productoEnCarrito = this.estaEnCarrito(producto);
+    if (!productoEnCarrito) {
+        this.carrito.push({ ...producto, cantidad: 1 });
     } else {
-    carrito.push(nuevoProducto);
+        productoEnCarrito.cantidad++;
     }
-    alert( nombrePrompt + " fue agregado al carrito.");
-    listar();
-}
-
-
-function listar() {
-    console.clear();
-    console.log("Productos que hay en el carrito:");
-    carrito.forEach((elemento) => {
-    console.log("----------");
-    console.log("Nombre:", elemento.nombre);
-    console.log("Precio:", elemento.precio);
-    console.log("Cantidad:", elemento.cantidad);
-    console.log("Subtotal:", elemento.subtotal);
-    });
-    const totalCarrito = carrito.reduce((acu, el) => acu + el.subtotal, 0);
-    console.log("TOTAL DEL CARRITO: $", totalCarrito);
-    const preciosActualizados = carrito.map((producto) => {
-    return {
-        nombre: producto.nombre,
-        precio: producto.precio * 1.25,
-        cantidad: producto.cantidad,
-    };
-    });
-    console.log("Precios actualizados:", preciosActualizados);
-    const nuevoArrayReordenado = carrito.sort((el1, el2) => {
-    if (el1.precio < el2.precio) {
-        return 1;
+    localStorage.setItem("carrito", JSON.stringify(this.carrito));
+    this.listar();
     }
-    if (el1.precio > el2.precio) {
-        return -1;
-    }
-    return 0;
-    });
-    console.log("Nuevo array reordenado:", nuevoArrayReordenado);
-}
 
-
-function quitar() {
-    const nombrePrompt = prompt("¿Qué producto querés quitar?");
-    const productoEncontrado = enCarrito(nombrePrompt);
-    if (productoEncontrado) {
-    const indiceProducto = carrito.indexOf(productoEncontrado);
-    carrito.splice(indiceProducto, 1);
-    alert("El producto " + productoEncontrado.nombre + " fue borrado del carrito.");
-    listar();
+    quitar(id) {
+    const indice = this.carrito.findIndex((producto) => producto.id === id);
+    if (this.carrito[indice].cantidad > 1) {
+        this.carrito[indice].cantidad--;
     } else {
-    alert("No se encontró " + nombrePrompt + " en el carrito.");
+        this.carrito.splice(indice, 1);
+    }
+    localStorage.setItem("carrito", JSON.stringify(this.carrito));
+    this.listar();
+    }
+
+    listar() {
+    this.total = 0;
+    this.cantidadProductos = 0;
+    divCarrito.innerHTML = "";
+    for (const producto of this.carrito) {
+        divCarrito.innerHTML += `
+        <div class="productoCarrito">
+            <h2>${producto.nombre}</h2>
+            <p>$${producto.precio}</p>
+            <p>Cantidad: ${producto.cantidad}</p>
+            <a href="#" class="btnQuitar" data-id="${producto.id}">Quitar del carrito</a>
+        </div>
+        `;
+      this.total += producto.precio * producto.cantidad;
+        this.cantidadProductos += producto.cantidad;
+    }
+    const botonesQuitar = document.querySelectorAll(".btnQuitar");
+    for (const boton of botonesQuitar) {
+        boton.addEventListener("click", (event) => {
+        event.preventDefault();
+        const idProducto = Number(boton.dataset.id);
+        this.quitar(idProducto);
+        });
+    }
+    spanCantidadProductos.innerText = this.cantidadProductos;
+    spanTotalCarrito.innerText = this.total;
     }
 }
+
+const bd = new BaseDeDatos();
+const spanCantidadProductos = document.querySelector("#cantidadProductos");
+const spanTotalCarrito = document.querySelector("#totalCarrito");
+const divProductos = document.querySelector("#productos");
+const divCarrito = document.querySelector("#carrito");
+const inputBuscar = document.querySelector("#inputBuscar");
+const botonCarrito = document.querySelector("section h1");
+const carrito = new Carrito();
+cargarProductos(bd.traerRegistros());
+
+
+function cargarProductos(productos) {
+    divProductos.innerHTML = "";
+    for (const producto of productos) {
+    divProductos.innerHTML += `
+        <div class="producto">
+        <h2>${producto.nombre}</h2>
+        <p class="precio">$${producto.precio}</p>
+        <a href="#" class="btnAgregar" data-id="${producto.id}">Agregar al carrito</a>
+        </div>
+    `;
+    }
+    const botonesAgregar = document.querySelectorAll(".btnAgregar");
+    for (const boton of botonesAgregar) {
+    boton.addEventListener("click", (event) => {
+        event.preventDefault();
+        const idProducto = Number(boton.dataset.id);
+        const producto = bd.registroPorId(idProducto);
+        carrito.agregar(producto);
+    });
+    }
+}
+
+inputBuscar.addEventListener("input", (event) => {
+    event.preventDefault();
+    const palabra = inputBuscar.value;
+    const productos = bd.registrosPorNombre(palabra);
+    cargarProductos(productos);
+});
+
+botonCarrito.addEventListener("click", (event) => {
+    document.querySelector("section").classList.toggle("ocultar");
+});
